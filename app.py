@@ -1,13 +1,10 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
+from transformers import pipeline
 
-# Initialize the model and tokenizer
-model_name = "google/flan-t5-base"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# Initialize the QA pipeline
+qa_pipeline = pipeline("question-answering", model="google/flan-t5-base")
 
 def fetch_website_content(url):
     response = requests.get(url)
@@ -15,14 +12,8 @@ def fetch_website_content(url):
     return soup.get_text()
 
 def answer_question(context, question):
-    input_text = f"question: {question}\ncontext: {context}"
-    inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
-    
-    with torch.no_grad():
-        outputs = model.generate(**inputs, max_length=64, num_return_sequences=1)
-    
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return answer
+    result = qa_pipeline(question=question, context=context)
+    return result['answer']
 
 st.title("Advanced Website Q&A Chatbot")
 
@@ -48,3 +39,4 @@ if url and question:
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     st.session_state.chat_history.append((question, answer))
+
